@@ -834,7 +834,6 @@ function applySettings() {
     </div>`
   ).join('');
   // tip & expense
-  document.getElementById('tip-note').textContent = s.tip;
   document.getElementById('expense-note').innerHTML = s.expense;
   // boat info card
   const gear = (s.boatGear || '').split(',').map(g => g.trim()).filter(Boolean);
