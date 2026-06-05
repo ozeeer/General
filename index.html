@@ -359,7 +359,8 @@
   </div>
 
   <div class="fab-row">
-    <button class="fab secondary" onclick="resetAll()">↺ Reset checks</button>
+    <button class="fab secondary" onclick="resetAll()">↺ Reset</button>
+    <button class="fab secondary" onclick="exportData()">⬇ Export</button>
   </div>
 </div>
 
@@ -628,6 +629,15 @@ function addCategory() {
   saveData();
   input.value = '';
   renderManage();
+}
+
+function exportData() {
+  const payload = { bbq_data: data, bbq_checked: checked };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'bbq_export.json';
+  a.click();
 }
 
 function resetAll() {
