@@ -115,7 +115,8 @@ header p { font-size: 13px; color: var(--muted); margin-top: 2px; }
   text-transform: uppercase; letter-spacing: 0.07em;
   color: var(--muted); padding: 10px 16px 6px;
 }
-.list { padding: 0 16px; display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.list { padding: 0 14px; display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.list:first-child { margin-top: 10px; }
 
 /* shopping items */
 .item {
@@ -362,7 +363,8 @@ header p { font-size: 13px; color: var(--muted); margin-top: 2px; }
 </header>
 
 <div class="tabs">
-  <button class="tab active" onclick="switchTab('list')">🛒 Shopping</button>
+  <button class="tab active" onclick="switchTab('plan')">📋 Plan</button>
+  <button class="tab" onclick="switchTab('list')">🛒 Shopping</button>
   <button class="tab" onclick="switchTab('boat')">⛵ Boat</button>
   <button class="tab" onclick="switchTab('bringing')">🧺 Bringing</button>
   <button class="tab" onclick="switchTab('manage')">⚙️ Manage</button>
@@ -373,8 +375,8 @@ header p { font-size: 13px; color: var(--muted); margin-top: 2px; }
   <span id="sync-label">Connecting to Firebase...</span>
 </div>
 
-<!-- ===== SHOPPING TAB ===== -->
-<div class="page active" id="page-list">
+<!-- ===== PLAN TAB ===== -->
+<div class="page active" id="page-plan">
 
   <!-- Intro plan card -->
   <div style="margin:12px 16px 0; background:var(--card); border:1px solid var(--border); border-radius:14px; overflow:hidden;">
@@ -402,7 +404,15 @@ header p { font-size: 13px; color: var(--muted); margin-top: 2px; }
 
   <div class="timeline" id="timeline-container"></div>
 
-  <div class="progress-bar-wrap">
+  <div class="note" id="tip-note" style="margin-top:10px;"></div>
+  <div class="expense-note" id="expense-note"></div>
+
+</div>
+
+<!-- ===== SHOPPING TAB ===== -->
+<div class="page" id="page-list">
+
+  <div class="progress-bar-wrap" style="padding-top:12px;">
     <div class="progress-label">
       <span>Shopping progress</span>
       <span id="prog-text">0 / 0</span>
@@ -411,9 +421,6 @@ header p { font-size: 13px; color: var(--muted); margin-top: 2px; }
   </div>
 
   <div id="lists-container"></div>
-
-  <div class="note" id="tip-note"></div>
-  <div class="expense-note" id="expense-note"></div>
 
   <div class="fab-row">
     <button class="fab secondary" onclick="resetChecks()">↺ Reset checks</button>
@@ -905,7 +912,7 @@ window.saveSettings = function() {
 
 
 window.switchTab = function(tab) {
-  const tabs = ['list','boat','bringing','manage'];
+  const tabs = ['plan','list','boat','bringing','manage'];
   tabs.forEach((t, i) => {
     document.getElementById('page-' + t).classList.toggle('active', t === tab);
     document.querySelectorAll('.tab')[i].classList.toggle('active', t === tab);
@@ -949,9 +956,12 @@ function updateProgress() {
   const done = Object.values(checked).filter(Boolean).length;
   document.getElementById('prog-text').textContent = done + ' / ' + total;
   document.getElementById('prog-fill').style.width = total ? (done / total * 100) + '%' : '0%';
+  const remaining = total - done;
+  const sublabel = document.getElementById('prog-sublabel');
+  if (sublabel) sublabel.textContent = done === total && total > 0 ? 'All done! ✅' : remaining + ' items left';
   document.getElementById('count-label').textContent = done === total && total > 0
-    ? '✅ All done! Ready for Saturday.'
-    : (total - done) + ' items left to grab';
+    ? '✅ Shopping done! Ready for Saturday.'
+    : (total - done) + ' items left to buy';
 }
 
 window.toggleCheck = function(ci, ii) {
