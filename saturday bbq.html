@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Saturday · BBQ & Boat</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f5f2ec;
+    --card: #ffffff;
+    --border: #e0dbd0;
+    --text: #1a1a1a;
+    --muted: #888;
+    --boat: #2563eb;
+    --fire: #d84e1a;
+    --check: #1a9e6e;
+    --tag-bg: #eef2ff;
+    --tag-text: #2563eb;
+    --danger: #dc2626;
+  }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0 0 100px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  header {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 20px 14px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  header h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; }
+  header p { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+  /* tabs */
+  .tabs {
+    display: flex;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 0 16px;
+    gap: 4px;
+  }
+  .tab {
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .tab.active { color: var(--text); border-bottom-color: var(--text); }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* timeline */
+  .timeline {
+    display: flex;
+    gap: 8px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .timeline::-webkit-scrollbar { display: none; }
+  .tcard {
+    flex: 0 0 140px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+  }
+  .tcard.boat { border-top: 3px solid var(--boat); }
+  .tcard.fire { border-top: 3px solid var(--fire); }
+  .tcard .tc-time { font-size: 11px; color: var(--muted); margin-bottom: 3px; }
+  .tcard .tc-label { font-size: 14px; font-weight: 600; }
+  .tcard .tc-note { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+  /* progress */
+  .progress-bar-wrap { padding: 0 16px 8px; }
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .progress-bar { height: 5px; background: var(--border); border-radius: 99px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--check); border-radius: 99px; transition: width 0.3s ease; }
+
+  /* section heads */
+  .section-head {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--muted);
+    padding: 10px 16px 6px;
+  }
+  .list { padding: 0 16px; display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+
+  /* items (shopping) */
+  .item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 12px 11px 14px;
+    transition: opacity 0.15s;
+    user-select: none;
+  }
+  .item.checked { opacity: 0.42; }
+  .item.checked .item-name { text-decoration: line-through; color: var(--muted); }
+  .check-area { display: flex; align-items: center; cursor: pointer; }
+  .check-circle {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border);
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .item.checked .check-circle { background: var(--check); border-color: var(--check); }
+  .checkmark {
+    display: none;
+    width: 10px; height: 7px;
+    border-left: 2px solid white;
+    border-bottom: 2px solid white;
+    transform: rotate(-45deg) translate(1px, -1px);
+  }
+  .item.checked .checkmark { display: block; }
+  .item-info { flex: 1; min-width: 0; cursor: pointer; }
+  .item-name { font-size: 14px; font-weight: 500; }
+  .item-qty { font-size: 12px; color: var(--muted); margin-top: 1px; }
+  .item-tag {
+    font-size: 10px; font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 99px;
+    background: var(--tag-bg); color: var(--tag-text);
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .item-tag.local { background: #f3f3f0; color: var(--muted); }
+  .item-actions { display: flex; gap: 4px; flex-shrink: 0; }
+  .btn-icon {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--muted);
+    transition: background 0.12s;
+  }
+  .btn-icon:active { background: var(--border); }
+  .btn-icon.del { color: var(--danger); }
+
+  /* note */
+  .note {
+    margin: 8px 16px 0;
+    background: #fff8f0;
+    border: 1px solid #fde4c8;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: #a05c1a;
+    line-height: 1.5;
+  }
+
+  /* manage tab */
+  .manage-section { padding: 14px 16px 0; }
+  .manage-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .manage-cat-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    background: #faf9f6;
+  }
+  .manage-cat-name { font-size: 13px; font-weight: 600; }
+  .manage-cat-actions { display: flex; gap: 6px; }
+  .manage-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .manage-item:last-child { border-bottom: none; }
+  .manage-item-info { flex: 1; min-width: 0; }
+  .manage-item-name { font-size: 13px; font-weight: 500; }
+  .manage-item-qty { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .manage-item-actions { display: flex; gap: 5px; }
+
+  .btn-sm {
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .btn-sm.primary { background: var(--text); color: white; border-color: var(--text); }
+  .btn-sm.danger { color: var(--danger); border-color: #fca5a5; background: #fff5f5; }
+
+  /* modal overlay */
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 100;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .overlay.open { display: flex; }
+  .modal {
+    background: var(--card);
+    border-radius: 20px 20px 0 0;
+    padding: 20px 20px 40px;
+    width: 100%;
+    max-width: 480px;
+  }
+  .modal h3 { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+  .field { margin-bottom: 12px; }
+  .field label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 5px; }
+  .field input, .field select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+  }
+  .field input:focus { border-color: #999; }
+  .modal-actions { display: flex; gap: 8px; margin-top: 16px; }
+  .modal-actions button { flex: 1; padding: 12px; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; border: none; }
+  .btn-cancel { background: var(--bg); color: var(--muted); }
+  .btn-save { background: var(--text); color: white; }
+
+  /* add category row */
+  .add-cat-row {
+    margin: 0 16px 16px;
+    display: flex;
+    gap: 8px;
+  }
+  .add-cat-row input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    background: var(--card);
+    color: var(--text);
+    outline: none;
+  }
+
+  /* fabs */
+  .fab-row {
+    position: fixed;
+    bottom: 20px;
+    left: 16px;
+    right: 16px;
+    display: flex;
+    gap: 8px;
+  }
+  .fab {
+    flex: 1;
+    background: var(--text);
+    color: white;
+    border: none;
+    border-radius: 30px;
+    padding: 13px 16px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  }
+  .fab.secondary { background: var(--card); color: var(--text); border: 1px solid var(--border); box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Saturday · BBQ & Boat</h1>
+  <p id="count-label">Loading...</p>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('list')">Shopping list</button>
+  <button class="tab" onclick="switchTab('manage')">Manage items</button>
+</div>
+
+<!-- LIST PAGE -->
+<div class="page active" id="page-list">
+  <div class="timeline">
+    <div class="tcard boat">
+      <div class="tc-time">11:00 AM</div>
+      <div class="tc-label">⛵ Boat</div>
+      <div class="tc-note">2 hrs · back 1 PM</div>
+    </div>
+    <div class="tcard">
+      <div class="tc-time">1:00 PM</div>
+      <div class="tc-label">🔥 Grill setup</div>
+      <div class="tc-note">marinate · prep</div>
+    </div>
+    <div class="tcard fire">
+      <div class="tc-time">~1:30 PM</div>
+      <div class="tc-label">🍗 BBQ</div>
+      <div class="tc-note">11–15 people</div>
+    </div>
+  </div>
+
+  <div class="progress-bar-wrap">
+    <div class="progress-label">
+      <span>Shopping progress</span>
+      <span id="prog-text">0 / 0</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+  </div>
+
+  <div id="lists-container"></div>
+
+  <div class="note">
+    💡 Marinate chicken thighs overnight Friday. Grill thighs first (~30 min), hot dogs last.
+  </div>
+
+  <div class="fab-row">
+    <button class="fab secondary" onclick="resetAll()">↺ Reset checks</button>
+  </div>
+</div>
+
+<!-- MANAGE PAGE -->
+<div class="page" id="page-manage">
+  <div class="manage-section">
+    <div id="manage-container"></div>
+    <div class="add-cat-row">
+      <input type="text" id="new-cat-input" placeholder="New category name..." />
+      <button class="btn-sm primary" onclick="addCategory()">+ Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- ITEM MODAL -->
+<div class="overlay" id="item-modal">
+  <div class="modal">
+    <h3 id="modal-title">Add item</h3>
+    <div class="field">
+      <label>Category</label>
+      <select id="modal-cat"></select>
+    </div>
+    <div class="field">
+      <label>Item name</label>
+      <input type="text" id="modal-name" placeholder="e.g. Burger patties" />
+    </div>
+    <div class="field">
+      <label>Quantity / note</label>
+      <input type="text" id="modal-qty" placeholder="e.g. 3 lbs" />
+    </div>
+    <div class="field">
+      <label>Store tag</label>
+      <select id="modal-tag">
+        <option value="Sam's">Sam's Club</option>
+        <option value="store">Other store</option>
+        <option value="pantry">Pantry</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveItem()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DEFAULT_DATA = [
+  { cat: "Proteins", items: [
+    { name: "Hot dogs (all-beef)", qty: "3–4 lbs", tag: "Sam's" },
+    { name: "Hot dog buns", qty: "2 packs (24ct)", tag: "Sam's" },
+    { name: "Chicken thighs, bone-in", qty: "8–10 lbs", tag: "Sam's" },
+  ]},
+  { cat: "Veggies", items: [
+    { name: "Corn on the cob", qty: "15 ears", tag: "Sam's" },
+    { name: "Zucchini", qty: "4–5 pieces", tag: "Sam's" },
+    { name: "Bell peppers", qty: "6 pieces", tag: "Sam's" },
+    { name: "Red onions", qty: "3–4 pieces", tag: "Sam's" },
+    { name: "Mushrooms", qty: "2 lbs", tag: "Sam's" },
+  ]},
+  { cat: "Sides", items: [
+    { name: "Coleslaw mix + dressing", qty: "2 bags", tag: "Sam's" },
+    { name: "Potato salad (ready-made)", qty: "5 lb tub", tag: "Sam's" },
+    { name: "Baked beans", qty: "3–4 cans", tag: "Sam's" },
+    { name: "Watermelon", qty: "1 whole", tag: "Sam's" },
+  ]},
+  { cat: "Condiments", items: [
+    { name: "Ketchup + mustard", qty: "combo pack", tag: "Sam's" },
+    { name: "BBQ sauce", qty: "2 bottles", tag: "Sam's" },
+    { name: "Salt, pepper, garlic powder", qty: "pantry check", tag: "pantry" },
+  ]},
+  { cat: "Drinks", items: [
+    { name: "Water (case)", qty: "×2", tag: "Sam's" },
+    { name: "Soda variety pack", qty: "×1", tag: "Sam's" },
+    { name: "Beer / seltzers", qty: "to taste", tag: "store" },
+    { name: "Ice", qty: "20–30 lbs", tag: "Sam's" },
+  ]},
+  { cat: "Supplies", items: [
+    { name: "Paper plates", qty: "50ct pack", tag: "Sam's" },
+    { name: "Plastic cups", qty: "×1 pack", tag: "Sam's" },
+    { name: "Napkins", qty: "×1 pack", tag: "Sam's" },
+    { name: "Aluminum foil + grill bags", qty: "roll + pack", tag: "Sam's" },
+    { name: "Trash bags", qty: "if low", tag: "pantry" },
+  ]}
+];
+
+let data = JSON.parse(localStorage.getItem('bbq_data') || 'null') || JSON.parse(JSON.stringify(DEFAULT_DATA));
+let checked = JSON.parse(localStorage.getItem('bbq_checked') || '{}');
+let editingItem = null; // { catIdx, itemIdx } or null for new
+
+function saveData() { localStorage.setItem('bbq_data', JSON.stringify(data)); }
+function saveChecked() { localStorage.setItem('bbq_checked', JSON.stringify(checked)); }
+
+function buildItemId(catIdx, itemIdx) { return catIdx + '_' + itemIdx; }
+
+function updateProgress() {
+  const total = data.reduce((s, c) => s + c.items.length, 0);
+  const done = Object.values(checked).filter(Boolean).length;
+  document.getElementById('prog-text').textContent = done + ' / ' + total;
+  document.getElementById('prog-fill').style.width = total ? (done / total * 100) + '%' : '0%';
+  document.getElementById('count-label').textContent = done === total && total > 0
+    ? '✅ All done! Ready for Saturday.'
+    : (total - done) + ' items left to grab';
+}
+
+function toggleCheck(catIdx, itemIdx) {
+  const id = buildItemId(catIdx, itemIdx);
+  checked[id] = !checked[id];
+  saveChecked();
+  renderList();
+  updateProgress();
+}
+
+function renderList() {
+  const container = document.getElementById('lists-container');
+  let html = '';
+  data.forEach((cat, ci) => {
+    html += `<div class="section-head">${cat.cat}</div><div class="list">`;
+    cat.items.forEach((item, ii) => {
+      const id = buildItemId(ci, ii);
+      const isChecked = checked[id] ? ' checked' : '';
+      const tagClass = item.tag === "Sam's" ? '' : ' local';
+      html += `<div class="item${isChecked}" id="item-${id}">
+        <div class="check-area" onclick="toggleCheck(${ci},${ii})">
+          <div class="check-circle"><div class="checkmark"></div></div>
+        </div>
+        <div class="item-info" onclick="toggleCheck(${ci},${ii})">
+          <div class="item-name">${item.name}</div>
+          <div class="item-qty">${item.qty}</div>
+        </div>
+        <div class="item-tag${tagClass}">${item.tag}</div>
+      </div>`;
+    });
+    html += '</div>';
+  });
+  container.innerHTML = html;
+}
+
+function renderManage() {
+  const container = document.getElementById('manage-container');
+  let html = '';
+  data.forEach((cat, ci) => {
+    html += `<div class="manage-card">
+      <div class="manage-cat-head">
+        <span class="manage-cat-name">${cat.cat}</span>
+        <div class="manage-cat-actions">
+          <button class="btn-sm" onclick="openAddItem(${ci})">+ Item</button>
+          <button class="btn-sm danger" onclick="deleteCategory(${ci})">Delete cat</button>
+        </div>
+      </div>`;
+    if (cat.items.length === 0) {
+      html += `<div style="padding:12px 14px; font-size:12px; color:var(--muted);">No items yet</div>`;
+    }
+    cat.items.forEach((item, ii) => {
+      html += `<div class="manage-item">
+        <div class="manage-item-info">
+          <div class="manage-item-name">${item.name}</div>
+          <div class="manage-item-qty">${item.qty} · ${item.tag}</div>
+        </div>
+        <div class="manage-item-actions">
+          <button class="btn-icon" onclick="openEditItem(${ci},${ii})">✏️</button>
+          <button class="btn-icon del" onclick="deleteItem(${ci},${ii})">🗑</button>
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+  });
+  container.innerHTML = html;
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', (i === 0 && tab === 'list') || (i === 1 && tab === 'manage'));
+  });
+  document.getElementById('page-list').classList.toggle('active', tab === 'list');
+  document.getElementById('page-manage').classList.toggle('active', tab === 'manage');
+  if (tab === 'manage') renderManage();
+}
+
+function populateCatSelect(selectedIdx) {
+  const sel = document.getElementById('modal-cat');
+  sel.innerHTML = data.map((c, i) => `<option value="${i}" ${i === selectedIdx ? 'selected' : ''}>${c.cat}</option>`).join('');
+}
+
+function openAddItem(catIdx) {
+  editingItem = null;
+  document.getElementById('modal-title').textContent = 'Add item';
+  document.getElementById('modal-name').value = '';
+  document.getElementById('modal-qty').value = '';
+  document.getElementById('modal-tag').value = "Sam's";
+  populateCatSelect(catIdx);
+  document.getElementById('item-modal').classList.add('open');
+  setTimeout(() => document.getElementById('modal-name').focus(), 100);
+}
+
+function openEditItem(catIdx, itemIdx) {
+  editingItem = { catIdx, itemIdx };
+  const item = data[catIdx].items[itemIdx];
+  document.getElementById('modal-title').textContent = 'Edit item';
+  document.getElementById('modal-name').value = item.name;
+  document.getElementById('modal-qty').value = item.qty;
+  document.getElementById('modal-tag').value = item.tag;
+  populateCatSelect(catIdx);
+  document.getElementById('item-modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('item-modal').classList.remove('open');
+}
+
+function saveItem() {
+  const name = document.getElementById('modal-name').value.trim();
+  if (!name) return;
+  const qty = document.getElementById('modal-qty').value.trim();
+  const tag = document.getElementById('modal-tag').value;
+  const catIdx = parseInt(document.getElementById('modal-cat').value);
+
+  if (editingItem) {
+    // if category changed, move item
+    if (editingItem.catIdx !== catIdx) {
+      data[editingItem.catIdx].items.splice(editingItem.itemIdx, 1);
+      data[catIdx].items.push({ name, qty, tag });
+    } else {
+      data[catIdx].items[editingItem.itemIdx] = { name, qty, tag };
+    }
+    // clear checked keys since indices shifted
+    checked = {};
+    saveChecked();
+  } else {
+    data[catIdx].items.push({ name, qty, tag });
+  }
+
+  saveData();
+  closeModal();
+  renderManage();
+  renderList();
+  updateProgress();
+}
+
+function deleteItem(catIdx, itemIdx) {
+  if (!confirm('Delete "' + data[catIdx].items[itemIdx].name + '"?')) return;
+  data[catIdx].items.splice(itemIdx, 1);
+  checked = {};
+  saveChecked();
+  saveData();
+  renderManage();
+  renderList();
+  updateProgress();
+}
+
+function deleteCategory(catIdx) {
+  if (!confirm('Delete category "' + data[catIdx].cat + '" and all its items?')) return;
+  data.splice(catIdx, 1);
+  checked = {};
+  saveChecked();
+  saveData();
+  renderManage();
+  renderList();
+  updateProgress();
+}
+
+function addCategory() {
+  const input = document.getElementById('new-cat-input');
+  const name = input.value.trim();
+  if (!name) return;
+  data.push({ cat: name, items: [] });
+  saveData();
+  input.value = '';
+  renderManage();
+}
+
+function resetAll() {
+  if (!confirm('Reset all checkmarks?')) return;
+  checked = {};
+  saveChecked();
+  renderList();
+  updateProgress();
+}
+
+// close modal on overlay click
+document.getElementById('item-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+renderList();
+updateProgress();
+</script>
+</body>
+</html>
