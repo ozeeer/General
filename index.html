@@ -727,11 +727,7 @@ const firebaseConfig = {
 const app = firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-function ref(path) { return db.ref(path); }
-function set(r, val) { return r.set(val); }
-function get(r) { return r.get(); }
-function onValue(r, cb) { r.on('value', snap => cb(snap)); }
-function update(r, val) { return r.update(val); }
+function dbRef(path) { return db.ref(path); }
 
 // ---- seed data from phone export ----
 const SEED_DATA = [
@@ -840,13 +836,13 @@ async function init() {
     const snap = await db.ref('bbq_saturday').once('value');
     if (!snap.exists()) {
       // seed
-      await set(ref(PATHS.shopData), SEED_DATA);
-      await set(ref(PATHS.checked), {});
-      await set(ref(PATHS.boatType), 'pontoon');
-      await set(ref(PATHS.slots), Array(12).fill(null).map(() => ({ name: '' })));
-      await set(ref(PATHS.bbqOnly), []);
-      await set(ref(PATHS.settings), DEFAULT_SETTINGS);
-      await set(ref(PATHS.expenses), []);
+      await db.ref(PATHS.shopData).set(SEED_DATA);
+      await db.ref(PATHS.checked).set({});
+      await db.ref(PATHS.boatType).set('pontoon');
+      await db.ref(PATHS.slots).set(Array(12).fill(null).map(() => ({ name: '' })));
+      await db.ref(PATHS.bbqOnly).set([]);
+      await db.ref(PATHS.settings).set(DEFAULT_SETTINGS);
+      await db.ref(PATHS.expenses).set([]);
     }
     startListeners();
     setSyncStatus('ok', 'Live · syncing with Firebase');
@@ -856,44 +852,44 @@ async function init() {
 }
 
 function startListeners() {
-  onValue(ref(PATHS.shopData), snap => {
+  db.ref(PATHS.shopData).on('value', snap => {
     shopData = snap.val() || SEED_DATA;
     renderList();
     updateProgress();
     renderManage();
   });
-  onValue(ref(PATHS.checked), snap => {
+  db.ref(PATHS.checked).on('value', snap => {
     checked = snap.val() || {};
     renderList();
     updateProgress();
   });
-  onValue(ref(PATHS.boatType), snap => {
+  db.ref(PATHS.boatType).on('value', snap => {
     boatType = snap.val() || 'pontoon';
     renderBoatTypeCards();
     renderSlots();
   });
-  onValue(ref(PATHS.slots), snap => {
+  db.ref(PATHS.slots).on('value', snap => {
     const raw = snap.val();
     slots = Array.isArray(raw) ? raw : (raw ? Object.values(raw) : []);
     renderSlots();
     renderExpenses();
   });
-  onValue(ref(PATHS.bbqOnly), snap => {
+  db.ref(PATHS.bbqOnly).on('value', snap => {
     const raw = snap.val();
     bbqOnly = Array.isArray(raw) ? raw : (raw ? Object.values(raw) : []);
     renderBbqOnly();
     renderExpenses();
   });
-  onValue(ref(PATHS.bringing), snap => {
+  db.ref(PATHS.bringing).on('value', snap => {
     const raw = snap.val();
     bringing = Array.isArray(raw) ? raw : (raw ? Object.values(raw) : []);
     renderBringing();
   });
-  onValue(ref(PATHS.settings), snap => {
+  db.ref(PATHS.settings).on('value', snap => {
     settings = snap.val() || DEFAULT_SETTINGS;
     applySettings();
   });
-  onValue(ref(PATHS.expenses), snap => {
+  db.ref(PATHS.expenses).on('value', snap => {
     const raw = snap.val();
     expenses = Array.isArray(raw) ? raw : (raw ? Object.values(raw) : []);
     renderExpenses();
@@ -990,7 +986,7 @@ window.saveSettings = function() {
     tip: document.getElementById('s-tip').value.trim() || DEFAULT_SETTINGS.tip,
     expense: document.getElementById('s-expense').value.trim() || DEFAULT_SETTINGS.expense,
   };
-  set(ref(PATHS.settings), updated);
+  db.ref(PATHS.settings).set(updated);
   closeModal('settings-modal');
 };
 
@@ -1051,12 +1047,12 @@ function updateProgress() {
 window.toggleCheck = function(ci, ii) {
   const id = ci + '_' + ii;
   const newVal = !checked[id];
-  ref(PATHS.checked).update({ [id]: newVal });
+  db.ref(PATHS.checked).update({ [id]: newVal });
 };
 
 window.resetChecks = function() {
   if (!confirm('Reset all checkmarks?')) return;
-  set(ref(PATHS.checked), {});
+  db.ref(PATHS.checked).set({});
 };
 
 window.exportData = function() {
@@ -1075,8 +1071,8 @@ window.selectBoatType = function(type) {
   if (type === boatType) return;
   if (!confirm('Switch boat type? This will resize the slots list.')) return;
   const newSlots = Array(cap).fill(null).map((_, i) => ({ name: slots[i] ? slots[i].name : '' }));
-  set(ref(PATHS.boatType), type);
-  set(ref(PATHS.slots), newSlots);
+  db.ref(PATHS.boatType).set(type);
+  db.ref(PATHS.slots).set(newSlots);
 };
 
 function renderBoatTypeCards() {
@@ -1119,7 +1115,7 @@ window.saveSlot = function() {
   const newSlots = [...slots];
   while (newSlots.length <= editingSlotIdx) newSlots.push({ name: '' });
   newSlots[editingSlotIdx] = { name };
-  set(ref(PATHS.slots), newSlots);
+  db.ref(PATHS.slots).set(newSlots);
   closeModal('slot-modal');
 };
 
@@ -1127,7 +1123,7 @@ window.clearSlot = function(idx) {
   if (!confirm('Remove ' + (slots[idx] && slots[idx].name) + ' from boat?')) return;
   const newSlots = [...slots];
   newSlots[idx] = { name: '' };
-  set(ref(PATHS.slots), newSlots);
+  db.ref(PATHS.slots).set(newSlots);
 };
 
 // bbq only
@@ -1161,14 +1157,14 @@ window.saveBbqOnly = function() {
   const arr = [...bbqOnly];
   if (editingBbqOnlyIdx !== null) arr[editingBbqOnlyIdx] = { name };
   else arr.push({ name });
-  set(ref(PATHS.bbqOnly), arr);
+  db.ref(PATHS.bbqOnly).set(arr);
   closeModal('bbqonly-modal');
 };
 window.deleteBbqOnly = function(idx) {
   if (!confirm('Remove ' + bbqOnly[idx].name + '?')) return;
   const arr = [...bbqOnly];
   arr.splice(idx, 1);
-  set(ref(PATHS.bbqOnly), arr);
+  db.ref(PATHS.bbqOnly).set(arr);
 };
 
 // ---- bringing ----
@@ -1210,14 +1206,14 @@ window.saveBringing = function() {
   const arr = [...bringing];
   if (editingBringingIdx !== null) arr[editingBringingIdx] = { name, what };
   else arr.push({ name, what });
-  set(ref(PATHS.bringing), arr);
+  db.ref(PATHS.bringing).set(arr);
   closeModal('bringing-modal');
 };
 window.deleteBringing = function(idx) {
   if (!confirm('Remove entry?')) return;
   const arr = [...bringing];
   arr.splice(idx, 1);
-  set(ref(PATHS.bringing), arr);
+  db.ref(PATHS.bringing).set(arr);
 };
 
 // ---- manage / edit items ----
@@ -1300,8 +1296,8 @@ window.saveItem = function() {
   } else {
     newData[catIdx].items.push({ name, qty, tag });
   }
-  set(ref(PATHS.shopData), newData);
-  set(ref(PATHS.checked), {});
+  db.ref(PATHS.shopData).set(newData);
+  db.ref(PATHS.checked).set({});
   closeModal('item-modal');
 };
 
@@ -1309,16 +1305,16 @@ window.deleteItem = function(catIdx, itemIdx) {
   if (!confirm('Delete "' + shopData[catIdx].items[itemIdx].name + '"?')) return;
   const newData = JSON.parse(JSON.stringify(shopData));
   newData[catIdx].items.splice(itemIdx, 1);
-  set(ref(PATHS.shopData), newData);
-  set(ref(PATHS.checked), {});
+  db.ref(PATHS.shopData).set(newData);
+  db.ref(PATHS.checked).set({});
 };
 
 window.deleteCategory = function(catIdx) {
   if (!confirm('Delete category "' + shopData[catIdx].cat + '" and all its items?')) return;
   const newData = JSON.parse(JSON.stringify(shopData));
   newData.splice(catIdx, 1);
-  set(ref(PATHS.shopData), newData);
-  set(ref(PATHS.checked), {});
+  db.ref(PATHS.shopData).set(newData);
+  db.ref(PATHS.checked).set({});
 };
 
 window.addCategory = function() {
@@ -1327,7 +1323,7 @@ window.addCategory = function() {
   if (!name) return;
   const newData = JSON.parse(JSON.stringify(shopData));
   newData.push({ cat: name, items: [] });
-  set(ref(PATHS.shopData), newData);
+  db.ref(PATHS.shopData).set(newData);
   input.value = '';
 };
 
@@ -1465,7 +1461,7 @@ window.saveExpense = function() {
   const entry = { paidBy, desc, amount, split };
   if (editingExpenseIdx !== null) arr[editingExpenseIdx] = entry;
   else arr.push(entry);
-  set(ref(PATHS.expenses), arr);
+  db.ref(PATHS.expenses).set(arr);
   closeModal('expense-modal');
 };
 
@@ -1473,7 +1469,7 @@ window.deleteExpense = function(idx) {
   if (!confirm('Delete "' + expenses[idx].desc + '"?')) return;
   const arr = [...expenses];
   arr.splice(idx, 1);
-  set(ref(PATHS.expenses), arr);
+  db.ref(PATHS.expenses).set(arr);
 };
 
 
