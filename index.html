@@ -709,8 +709,8 @@ header p { font-size: 13px; color: var(--muted); margin-top: 2px; }
 </div>
 
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script>
 
 const firebaseConfig = {
@@ -833,17 +833,6 @@ const PATHS = {
 async function init() {
   setSyncStatus('loading', 'Loading...');
   try {
-    const snap = await db.ref('bbq_saturday').once('value');
-    if (!snap.exists()) {
-      // seed
-      await db.ref(PATHS.shopData).set(SEED_DATA);
-      await db.ref(PATHS.checked).set({});
-      await db.ref(PATHS.boatType).set('pontoon');
-      await db.ref(PATHS.slots).set(Array(12).fill(null).map(() => ({ name: '' })));
-      await db.ref(PATHS.bbqOnly).set([]);
-      await db.ref(PATHS.settings).set(DEFAULT_SETTINGS);
-      await db.ref(PATHS.expenses).set([]);
-    }
     startListeners();
     setSyncStatus('ok', 'Live · syncing with Firebase');
   } catch(e) {
@@ -852,8 +841,12 @@ async function init() {
 }
 
 function startListeners() {
-  db.ref(PATHS.shopData).on('value', snap => {
-    shopData = snap.val() || SEED_DATA;
+  db.ref('.info/connected').on('value', snap => {
+    if (snap.val()) setSyncStatus('ok', 'Live · syncing with Firebase');
+    else setSyncStatus('loading', 'Reconnecting...');
+  });
+    shopData = snap.val() || [];
+    if (!snap.val()) db.ref(PATHS.shopData).set(SEED_DATA);
     renderList();
     updateProgress();
     renderManage();
@@ -871,6 +864,7 @@ function startListeners() {
   db.ref(PATHS.slots).on('value', snap => {
     const raw = snap.val();
     slots = Array.isArray(raw) ? raw : (raw ? Object.values(raw) : []);
+    if (!raw) db.ref(PATHS.slots).set(Array(12).fill(null).map(() => ({ name: '' })));
     renderSlots();
     renderExpenses();
   });
