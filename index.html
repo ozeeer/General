@@ -362,7 +362,7 @@ header p { font-size: 13px; color: var(--muted); margin-top: 2px; }
 .summary-detail{font-size:11px;color:var(--muted);margin-top:2px;}
 .summary-owes{font-size:13px;font-weight:600;color:var(--danger);}
 .summary-paid{font-size:13px;font-weight:600;color:var(--check);}
-.summary-even{font-size:12px;color:var(--muted);}
+.settled-strike { text-decoration: line-through; }
 
   padding: 20px 14px; text-align: center;
   font-size: 13px; color: var(--muted);
@@ -787,6 +787,7 @@ let slots = [];
 let bbqOnly = [];
 let bringing = [];
 let expenses = [];
+let settled = {};
 let settings = {};
 let editingItem = null;
 let editingSlotIdx = null;
@@ -826,7 +827,8 @@ const PATHS = {
   bbqOnly: 'bbq_saturday/bbq_only',
   bringing: 'bbq_saturday/bringing',
   settings: 'bbq_saturday/settings',
-  expenses: 'bbq_saturday/expenses'
+  expenses: 'bbq_saturday/expenses',
+  settled: 'bbq_saturday/settled'
 };
 
 // ---- init: load or seed ----
@@ -845,6 +847,7 @@ function startListeners() {
     if (snap.val()) setSyncStatus('ok', 'Live · syncing with Firebase');
     else setSyncStatus('loading', 'Reconnecting...');
   });
+  db.ref(PATHS.shopData).on('value', snap => {
     shopData = snap.val() || [];
     if (!snap.val()) db.ref(PATHS.shopData).set(SEED_DATA);
     renderList();
@@ -886,6 +889,10 @@ function startListeners() {
   db.ref(PATHS.expenses).on('value', snap => {
     const raw = snap.val();
     expenses = Array.isArray(raw) ? raw : (raw ? Object.values(raw) : []);
+    renderExpenses();
+  });
+  db.ref(PATHS.settled).on('value', snap => {
+    settled = snap.val() || {};
     renderExpenses();
   });
 }
@@ -1404,26 +1411,44 @@ function renderExpenses() {
 
   document.getElementById('exp-summary-list').innerHTML = names.map(name => {
     const { paid, owes } = ledger[name];
-    const net = owes - paid; // positive = owes money, negative = is owed money
+    const net = owes - paid;
+    const isSettled = !!settled[name];
     let statusHtml;
     if (Math.abs(net) < 0.01) {
       statusHtml = `<span class="summary-even">All even ✓</span>`;
     } else if (net > 0) {
-      statusHtml = `<span class="summary-owes">Owes $${net.toFixed(2)}</span>`;
+      statusHtml = `<span class="summary-owes${isSettled ? ' settled-strike' : ''}">Owes $${net.toFixed(2)}</span>`;
     } else {
       statusHtml = `<span class="summary-paid">Gets back $${Math.abs(net).toFixed(2)}</span>`;
     }
-    return `<div class="summary-row">
+    // only show settle button for people who owe money
+    const settleBtn = net > 0.01 ? `
+      <button onclick="toggleSettled('${name}')" style="
+        margin-left:8px;
+        width:28px;height:28px;border-radius:50%;border:1.5px solid ${isSettled ? 'var(--check)' : 'var(--border)'};
+        background:${isSettled ? 'var(--check)' : 'var(--bg)'};
+        display:inline-flex;align-items:center;justify-content:center;
+        cursor:pointer;font-size:13px;flex-shrink:0;
+      " title="${isSettled ? 'Mark as unpaid' : 'Mark as paid'}">${isSettled ? '✓' : ''}</button>` : '';
+    return `<div class="summary-row" style="${isSettled ? 'opacity:0.5;' : ''}">
       <div>
-        <div class="summary-name">${name}</div>
+        <div class="summary-name">${name}${isSettled ? ' <span style="font-size:10px;color:var(--check);font-weight:600;">PAID</span>' : ''}</div>
         <div class="summary-detail">Paid $${paid.toFixed(2)} · Share $${owes.toFixed(2)}</div>
       </div>
-      ${statusHtml}
+      <div style="display:flex;align-items:center;">
+        ${statusHtml}
+        ${settleBtn}
+      </div>
     </div>`;
   }).join('');
 }
 
-window.openAddExpense = function() {
+window.toggleSettled = function(name) {
+  const newVal = !settled[name];
+  db.ref(PATHS.settled).update({ [name]: newVal });
+};
+
+
   editingExpenseIdx = null;
   document.getElementById('exp-modal-title').textContent = 'Add expense';
   document.getElementById('exp-paidby').value = '';
